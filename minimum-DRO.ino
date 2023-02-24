@@ -123,8 +123,8 @@ Bounce Switch2Bouncer = Bounce();
 
 #define TM1637_1_DATA_PIN 27
 #define TM1637_1_CLK_PIN 25
-#define TM1637_2_DATA_PIN 19
-#define TM1637_2_CLK_PIN 18
+#define TM1637_2_DATA_PIN 18
+#define TM1637_2_CLK_PIN 19
 #define TM1637_3_DATA_PIN 23
 #define TM1637_3_CLK_PIN 5
 
