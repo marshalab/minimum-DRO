@@ -1,7 +1,7 @@
 /*
  minimum DRO
 
- iGaging Digital Scales Controller V0.1a
+ iGaging Digital Scales Controller V0.5a
  Created 17 Junary 2023
  Update 17 Junary 2023
  Copyright (C) 2023 Arkhipov Aleksandr, https://github.com/marshalab
@@ -206,7 +206,7 @@ void readEncoder1()
     while (synchronized == false)
     {
       syncTimer = millis(); //start timer
-      while (digitalRead(clk1) == !INVERTIN) {} //wait until the clk goes low
+      while (digitalRead(clk1) == !INVERTIN) {        if((millis() - syncTimer) >250) break;      } //wait until the clk goes low
       //Time between the last rising edge of CLK and the first falling edge is 115.7 ms
       //Time of the "wide high part" that separates the 4-bit parts: 410 us
 
@@ -222,14 +222,14 @@ void readEncoder1()
 
     for (int i = 0; i < 23; i++) //We read the whole data block - just for consistency
     {
-      while (digitalRead(clk1) == INVERTIN) {} // wait for the rising edge
+      while (digitalRead(clk1) == INVERTIN) {        if((millis() - syncTimer) >250) break;} // wait for the rising edge
 
       dro_bits1[i] = digitalRead(data1);
       //Print the data on the serial
 //      Serial.print(dro_bits1[i]);
 //      Serial.print(" ");
 
-      while (digitalRead(clk1) == !INVERTIN) {} // wait for the falling edge
+      while (digitalRead(clk1) == !INVERTIN) {        if((millis() - syncTimer) >250) break;} // wait for the falling edge
     }
 //    Serial.println(" ");
 
@@ -267,6 +267,7 @@ void readEncoder1()
     else{
       resultValueX = rawValueX - setupSet.tareX[setupSet.memoryChX];
     }
+    
     if(setupSet.plus_minus_X) resultValueX = -resultValueX;
 
     //Dump everything on the serial
@@ -297,7 +298,7 @@ void readEncoder2()
     while (synchronized == false)
     {
       syncTimer = millis(); //start timer
-      while (digitalRead(clk2) == !INVERTIN) {} //wait until the clk goes low
+      while (digitalRead(clk2) == !INVERTIN) {        if((millis() - syncTimer) >250) break;              } //wait until the clk goes low
       //Time between the last rising edge of CLK and the first falling edge is 115.7 ms
       //Time of the "wide high part" that separates the 4-bit parts: 410 us
 
@@ -313,14 +314,14 @@ void readEncoder2()
 
     for (int i = 0; i < 23; i++) //We read the whole data block - just for consistency
     {
-      while (digitalRead(clk2) == INVERTIN) {} // wait for the rising edge
+      while (digitalRead(clk2) == INVERTIN) {        if((millis() - syncTimer) >250) break;} // wait for the rising edge
 
       dro_bits2[i] = digitalRead(data2);
       //Print the data on the serial
 //      Serial.print(dro_bits2[i]);
 //      Serial.print(" ");
 
-      while (digitalRead(clk2) == !INVERTIN) {} // wait for the falling edge
+      while (digitalRead(clk2) == !INVERTIN) {        if((millis() - syncTimer) >250) break;} // wait for the falling edge
     }
 //    Serial.println(" ");
 
@@ -470,7 +471,7 @@ void setup()
 
   pinMode(INPUT_TACH_PIN, INPUT);
   pinMode(INPUT_PROBE_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(INPUT_TACH_PIN), tachoIsr, RISING);
+  attachInterrupt(digitalPinToInterrupt(INPUT_TACH_PIN), tachoIsr, CHANGE);
   attachInterrupt(digitalPinToInterrupt(INPUT_PROBE_PIN), probreIsr, RISING);
   
   if (!loadEEPROM()) tone(BEEP_PIN, 200,1000);
@@ -521,11 +522,11 @@ void loop() {
         else sprintf(buff1,"R %4d", resultRPM_T);
       TM3.displayPChar(buff1);      
       break;
-    case MODEEDITX: //modeEditX
+    case MODEEDITX: //modeEditX дисплей
       TM1.setBrightness(7);
       TM2.setBrightness(1);
       TM3.setBrightness(7);
-      if(setupSet.plus_minus_X) temporaryValueX = -temporaryValueX;
+      //  if(setupSet.plus_minus_X) temporaryValueX = -temporaryValueX;
       TM1.displayFloat(temporaryValueX,2);     //only Diametr input
       TM2.displayFloat(resultValueZ,2);
       switch(setupSet.memoryChX+1){
@@ -546,7 +547,7 @@ void loop() {
         TM1.displayFloat(resultValueX,2);   //Radius
       }else
         TM1.displayFloat(resultValueX*2,2);     //Diametr
-      if(setupSet.plus_minus_Z) temporaryValueZ = -temporaryValueZ;
+      // if(setupSet.plus_minus_Z) temporaryValueZ = -temporaryValueZ;
       TM2.displayFloat(temporaryValueZ,2);
       switch(setupSet.memoryChZ+1){
         case 1: sprintf(buff,"_     "); break;
@@ -573,7 +574,7 @@ void loop() {
         if (setupSet.mm_inch) sprintf(buff1,"R.%4d", resultRPM_T);
         else sprintf(buff1,"R %4d", resultRPM_T);
       TM3.displayPChar(buff1);      
-  }
+  } //DISPLAY-MENU
   
   //KEYPAD
   static boolean isUnpressed = LOW;
@@ -637,7 +638,7 @@ void loop() {
         if (lastCodeKeyPressed[0] == ch)
         {
           if (now - isPressedTimeOut <= KEYPAD_2ST_PRESS_TIMEOOUT)
-          {   // 2ST press              // RESER TARE TO 0
+          {   // 2ST press              // RESET TARE TO 0
             keypad_press_count++;
             isPressedTimeOut = now;
             lastTimeKeyPressed = now;
@@ -647,7 +648,7 @@ void loop() {
               lastCodeKeyPressed[0] = 255;
             }
             if (ch=='A')
-            if (modeSet == MODEEDITX)
+            if (modeSet == MODEEDITX)     // обнуление значения ро Х
             {
               setupSet.tareX[setupSet.memoryChX] = rawValueX;
               inputString = "";
@@ -770,26 +771,30 @@ void loop() {
       if (ch != 'N' || ch != 'F')
       if (ch == 'D' )
       {
-        if (modeSet == MODEEDITX)
+        if (modeSet == MODEEDITX) // ввод значения оси Х
         if (inputString != "")
         {
           if ( Switch1State == HIGH ) {         //Switch Radius / Diametr
-            if (setupSet.mm_inch) setupSet.tareX[setupSet.memoryChX] = rawValueX - (inputValueX * 25.4);
-            else setupSet.tareX[setupSet.memoryChX] = rawValueX - inputValueX;
+            if (setupSet.mm_inch) inputValueX = -(inputValueX * 25.4);
+            else inputValueX = -inputValueX;
           }
           else
           {
-            if (setupSet.mm_inch) inputValueX = inputValueX * 25.4 /2;
-            else inputValueX = inputValueX /2;
-            setupSet.tareX[setupSet.memoryChX] = rawValueX - inputValueX;
+            if (setupSet.mm_inch) inputValueX = -(inputValueX * 25.4 /2);
+            else inputValueX = -inputValueX /2;
           }
+          if(setupSet.plus_minus_X) setupSet.tareX[setupSet.memoryChX] = rawValueX - inputValueX;
+          else setupSet.tareX[setupSet.memoryChX] = rawValueX + inputValueX;          
           saveEEPROM();
         }
         if (modeSet == MODEEDITZ)
         if (inputString != "")
         {
-          if (setupSet.mm_inch) setupSet.tareZ[setupSet.memoryChZ] = rawValueZ - (inputValueZ * 25.4);
-          else setupSet.tareZ[setupSet.memoryChZ] = rawValueZ - inputValueZ;
+          if (setupSet.mm_inch) inputValueZ = -(inputValueZ * 25.4);
+          else inputValueZ = -inputValueZ;
+          
+          if(setupSet.plus_minus_Z) setupSet.tareZ[setupSet.memoryChZ] = rawValueZ - inputValueZ;
+          else setupSet.tareZ[setupSet.memoryChZ] = rawValueZ + inputValueZ;          
           saveEEPROM();
         }
         modeSet = MODEWORK;
@@ -807,21 +812,27 @@ void loop() {
         isUnpressed = LOW;
       }
       
+      // ввод значений
       if (ch != 'N' || ch != 'F')
       if (ch == '*' || ch == '#' || ch == '0' || ch == '1' || ch == '2' || ch == '3' || ch == '4' || ch == '5' || ch == '6' || ch == '7' || ch == '8' || ch == '9')
       {
-        if (ch == '*' ) ch = '.';
+        if (ch == '*' ) ch = '.';   // ввод десятичных значений
         
-        if (modeSet == MODEEDITX) 
+        if (modeSet == MODEEDITX && '#' != ch) 
         {
           if ('.' != ch && inputString == "0") {
             inputString = String(ch);
           } else if (ch) {
             inputString += String(ch);
-          }          
-          inputValueX = inputString.toFloat();//keypad_buffer = keypad_buffer *10 + (ch- '0');
+          }
+          inputValueX = inputString.toFloat();//keypad_buffer = keypad_buffer *10 + (ch- '0');          
         }
-        if (modeSet == MODEEDITZ) 
+        if(ch == '#' && modeSet == MODEEDITX)  // смена знака +- кнопкой #
+          {
+            inputValueX = -(inputValueX);
+          }
+          
+        if (modeSet == MODEEDITZ && '#' != ch) 
         {
           if ('.' != ch && inputString == "0") {
             inputString = String(ch);
@@ -829,7 +840,11 @@ void loop() {
             inputString += String(ch);
           }          
           inputValueZ = inputString.toFloat();//keypad_buffer = keypad_buffer *10 + (ch- '0');
-        }        
+        }
+        if(ch == '#' && modeSet == MODEEDITZ)  // смена знака +- кнопкой #
+          {
+            inputValueZ = -(inputValueZ);
+          }
         Serial.print(ch);//    Serial.print(" \t");    //TAB
         lastTimeKeyPressed = now;
         isPressedTimeOut = now;
@@ -846,15 +861,22 @@ void loop() {
     {
       if (setupSet.mm_inch) temporaryValueX = (rawValueX - setupSet.tareX[setupSet.memoryChX]) * 0.0393701;
       else temporaryValueX = rawValueX - setupSet.tareX[setupSet.memoryChX];
+      if ( Switch1State == HIGH ) {         //Switch Radius / Diametr
+              temporaryValueX = temporaryValueX;   //Radius
+            }else
+              temporaryValueX = temporaryValueX*2;     //Diametr   
+      if(setupSet.plus_minus_X)  temporaryValueX = -temporaryValueX;
     }
     else
       temporaryValueX = inputValueX;
   }
+  
   if (modeSet == MODEEDITZ){
     if (inputString == "")
     {
       if (setupSet.mm_inch) temporaryValueZ = (rawValueZ - setupSet.tareZ[setupSet.memoryChZ]) * 0.0393701;
       else temporaryValueZ = rawValueZ - setupSet.tareZ[setupSet.memoryChZ];
+      if(setupSet.plus_minus_Z)  temporaryValueZ = -temporaryValueZ;      
     }
     else
       temporaryValueZ = inputValueZ;
@@ -919,11 +941,18 @@ byte crc8(byte *buffer, byte size) {
   return crc;
 }
 
+volatile uint32_t debounce;
 IRAM_ATTR void tachoIsr() {
 static long timeLast = 0;
-  tachoProbe = HIGH;
-  tachoTime = micros() - timeLast;
-  timeLast = micros();
+
+  if (millis() - debounce >= 33 && digitalRead(INPUT_TACH_PIN)) {
+    debounce = millis();
+    // ваш код по прерыванию по высокому сигналу
+    tachoProbe = HIGH;
+    tachoTime = micros() - timeLast;
+    timeLast = micros();    
+  }
+  
 }
 
 IRAM_ATTR void probreIsr() {
